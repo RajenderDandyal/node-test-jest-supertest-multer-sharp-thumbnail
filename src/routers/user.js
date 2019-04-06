@@ -83,7 +83,30 @@ router.delete('/users/me', auth, async (req, res) => {
         res.status(500).send()
     }
 })
+/////// direct upload to s3 /////////
+/*
+aws.config.update({
+    secretAccessKey: 'YOUR_ACCESS_SECRET_KEY',
+    accessKeyId: 'YOUR_ACCESS_KEY_ID',
+    region: 'us-east-1'
+});
 
+const app = express();
+const s3 = new aws.S3();
+
+app.use(bodyParser.json());
+
+const upload = multer({
+    storage: multerS3({
+        s3: s3,
+        acl: 'public-read',
+        bucket: 'YOUR_BUCKET_NAME',
+        key: function (req, file, cb) {
+            console.log(file);
+            cb(null, file.originalname); //use Date.now() for unique file keys
+        }
+    })
+});*/
 const upload = multer({
     limits: {
         fileSize: 1000000
@@ -95,11 +118,16 @@ const upload = multer({
 
         cb(undefined, true)
     }
-})
+});
 
 router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => {
     const buffer = await sharp(req.file.buffer).resize({ width: 250, height: 250 }).png().toBuffer()
-    req.user.avatar = buffer
+    const thumbBuffer = await sharp(req.file.buffer).resize({ width: 250, height: 250 }).png({quality:10, colors:10}).toBuffer()
+
+    ////////////////////////
+    // to directly upload to s3 use -- multer-s3 lib .. read docs
+
+    req.user.avatar = buffer // can save directly to s3 or gcp storage
     await req.user.save()
     res.send()
 }, (error, req, res, next) => {
