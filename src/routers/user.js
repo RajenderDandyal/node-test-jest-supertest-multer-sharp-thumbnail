@@ -6,7 +6,7 @@ const auth = require('../middleware/auth')
 const { sendWelcomeEmail, sendCancelationEmail } = require('../emails/account')
 const router = new express.Router()
 
-router.post('/users', async (req, res) => {
+router.post('/users', async (req, res, next) => {
     const user = new User(req.body)
 
     try {
@@ -15,21 +15,25 @@ router.post('/users', async (req, res) => {
         const token = await user.generateAuthToken()
         res.status(201).send({ user, token })
     } catch (e) {
-        res.status(400).send(e)
+        //res.status(400).send(e)
+        e.status = 400;
+        next(e)
     }
 })
 
-router.post('/users/login', async (req, res) => {
+router.post('/users/login', async (req, res, next) => {
     try {
         const user = await User.findByCredentials(req.body.email, req.body.password)
         const token = await user.generateAuthToken()
         res.send({ user, token })
     } catch (e) {
-        res.status(400).send()
+       // res.status(400).send()
+        e.status = 400;
+        next(e)
     }
 })
 
-router.post('/users/logout', auth, async (req, res) => {
+router.post('/users/logout', auth, async (req, res, next) => {
     try {
         req.user.tokens = req.user.tokens.filter((token) => {
             return token.token !== req.token
@@ -38,17 +42,20 @@ router.post('/users/logout', auth, async (req, res) => {
 
         res.send()
     } catch (e) {
-        res.status(500).send()
+        //res.status(500).send()
+        //e.status = 400;
+        next(e)
     }
 })
 
-router.post('/users/logoutAll', auth, async (req, res) => {
+router.post('/users/logoutAll', auth, async (req, res, next) => {
     try {
         req.user.tokens = []
         await req.user.save()
         res.send()
     } catch (e) {
-        res.status(500).send()
+        //res.status(500).send()
+        next(e)
     }
 })
 
@@ -56,7 +63,7 @@ router.get('/users/me', auth, async (req, res) => {
     res.send(req.user)
 })
 
-router.patch('/users/me', auth, async (req, res) => {
+router.patch('/users/me', auth, async (req, res, next) => {
     const updates = Object.keys(req.body)
     const allowedUpdates = ['name', 'email', 'password', 'age']
     const isValidOperation = updates.every((update) => allowedUpdates.includes(update))
@@ -70,17 +77,21 @@ router.patch('/users/me', auth, async (req, res) => {
         await req.user.save()
         res.send(req.user)
     } catch (e) {
-        res.status(400).send(e)
+        //res.status(400).send(e)
+        e.status = 400;
+        next(e)
     }
 })
 
-router.delete('/users/me', auth, async (req, res) => {
+router.delete('/users/me', auth, async (req, res, next) => {
     try {
         await req.user.remove()
         sendCancelationEmail(req.user.email, req.user.name)
         res.send(req.user)
     } catch (e) {
-        res.status(500).send()
+       // res.status(500).send()
+        e.status = 400;
+        next(e)
     }
 })
 /////// direct upload to s3 /////////
@@ -131,7 +142,9 @@ router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) 
     await req.user.save()
     res.send()
 }, (error, req, res, next) => {
-    res.status(400).send({ error: error.message })
+    //res.status(400).send({ error: error.message })
+    e.status = 400;
+    next(e)
 })
 
 router.delete('/users/me/avatar', auth, async (req, res) => {
@@ -140,7 +153,7 @@ router.delete('/users/me/avatar', auth, async (req, res) => {
     res.send()
 })
 
-router.get('/users/:id/avatar', async (req, res) => {
+router.get('/users/:id/avatar', async (req, res, next) => {
     try {
         const user = await User.findById(req.params.id)
 
@@ -151,7 +164,9 @@ router.get('/users/:id/avatar', async (req, res) => {
         res.set('Content-Type', 'image/png')
         res.send(user.avatar)
     } catch (e) {
-        res.status(404).send()
+       // res.status(404).send()
+        e.status = 404;
+        next(e)
     }
 })
 

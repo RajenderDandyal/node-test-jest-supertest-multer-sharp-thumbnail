@@ -10,13 +10,17 @@ app.use(userRouter)
 app.use(taskRouter)
 
 // error handling
+
+// page not found
 app.use((req, res, next) => {
     const error = new Error('Not found');
     error.message = 'Invalid route';
     error.status = 404;
     next(error);
 });
+// log errors to console
 app.use(logErrors);
+//
 app.use(clientErrorHandler);
 app.use((error, req, res, next) => {
     res.status(error.status || 500);
@@ -35,7 +39,8 @@ function logErrors (err, req, res, next) {
 // error handling for xhr request
 function clientErrorHandler (err, req, res, next) {
     if (req.xhr) {
-        res.status(500).send({ error: err.message })
+        console.log("xhr request");
+        res.status(400).send({ error: err.message })
     } else {
         next(err)
     }
